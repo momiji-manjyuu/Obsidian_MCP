@@ -1,0 +1,45 @@
+{
+  "name": "obsidian-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Obsidian vault operations (scaffolding)",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "tsc -w --preserveWatchOutput",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "obsidian",
+    "mcp",
+    "agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "better-sqlite3": "^9.0.0",
+    "fast-glob": "^3.3.2",
+    "fs-extra": "^11.2.0",
+    "nanoid": "^5.0.7",
+    "pino": "^9.0.0",
+    "strip-ansi": "^7.1.0",
+    "yaml": "^2.3.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.3",
+    "vitest": "^1.3.1"
+  }
+}

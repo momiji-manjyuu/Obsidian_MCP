@@ -1,0 +1,21 @@
+{
+  "vaults": [
+    {
+      "name": "default",
+      "path": "./examples/vault-sample"
+    }
+  ],
+  "transport": {
+    "stdio": { "enabled": true },
+    "http": { "enabled": false }
+  },
+  "storage": {
+    "location": "vault",
+    "vaultSubdir": ".mcp",
+    "filename": "index-v1.sqlite"
+  },
+  "markdown": {
+    "profile": "omp-default",
+    "enforcement": "strict"
+  }
+}
