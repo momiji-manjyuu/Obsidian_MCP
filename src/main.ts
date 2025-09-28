@@ -11,10 +11,12 @@ let server: McpServer | undefined;
 
 async function bootstrap() {
   const logger = createLogger();
+  const bootstrapLogger = logger.withModule('bootstrap');
+  const timer = bootstrapLogger.startTimer('Bootstrap complete');
 
   try {
     const config = loadConfig();
-    logger.info({ vaults: config.vaults.length }, 'Loaded configuration');
+    bootstrapLogger.info({ vaults: config.vaults.length }, 'Loaded configuration');
 
     appContext = await createAppContext(config, logger);
     server = new McpServer({
@@ -25,12 +27,17 @@ async function bootstrap() {
     registerVaultSearchTool(server, appContext);
     registerVaultGetTool(server, appContext);
 
-    logger.info('Starting stdio transport');
+    bootstrapLogger.info('Starting stdio transport');
     await startStdio(server);
+    timer.end('Bootstrap complete');
   } catch (error) {
-    logger.error({ err: error }, 'Failed to start server');
+    timer.fail(error, 'Failed to start server');
     if (appContext) {
-      await shutdownApp(appContext);
+      try {
+        await shutdownApp(appContext);
+      } catch (shutdownError) {
+        bootstrapLogger.error({ err: shutdownError }, 'Failed during cleanup after bootstrap error');
+      }
     }
     if (server) {
       await server.close();
@@ -40,15 +47,26 @@ async function bootstrap() {
 }
 
 async function handleShutdown(signal: NodeJS.Signals) {
-  const logger = createLogger();
-  logger.info({ signal }, 'Received shutdown signal');
-  if (server) {
-    await server.close();
+  const baseLogger = appContext?.logger ?? createLogger();
+  const shutdownLogger = baseLogger.withModule('lifecycle');
+  shutdownLogger.info({ signal }, 'Received shutdown signal');
+  const timer = shutdownLogger.startTimer('Shutdown sequence complete');
+  let exitCode = 0;
+  try {
+    if (server) {
+      await server.close();
+      shutdownLogger.info('Closed MCP server transport');
+    }
+    if (appContext) {
+      await shutdownApp(appContext);
+    }
+    timer.end('Shutdown sequence complete');
+  } catch (error) {
+    exitCode = 1;
+    timer.fail(error, 'Shutdown sequence encountered an error');
+  } finally {
+    process.exit(exitCode);
   }
-  if (appContext) {
-    await shutdownApp(appContext);
-  }
-  process.exit(0);
 }
 
 process.on('SIGINT', (signal) => {

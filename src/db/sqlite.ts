@@ -167,17 +167,19 @@ function rowToNoteRecord(row: any): NoteRecord {
 export function createDatabase(config: AppConfig, logger: Logger): DatabaseContext {
   ensureStorageDirectory(config);
   const dbPath = config.storage.databasePath;
-  const sqlite = new Database(dbPath);
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('synchronous = NORMAL');
-  sqlite.pragma('foreign_keys = ON');
+  const timer = logger.startTimer('SQLite database ready', { dbPath });
+  try {
+    const sqlite = new Database(dbPath);
+    sqlite.pragma('journal_mode = WAL');
+    sqlite.pragma('synchronous = NORMAL');
+    sqlite.pragma('foreign_keys = ON');
 
-  const transaction = sqlite.transaction((queries: string[]) => {
-    for (const query of queries) {
-      sqlite.exec(query);
-    }
-  });
-  transaction(SQL_CREATE_TABLES);
+    const transaction = sqlite.transaction((queries: string[]) => {
+      for (const query of queries) {
+        sqlite.exec(query);
+      }
+    });
+    transaction(SQL_CREATE_TABLES);
 
   const insertNoteStmt = sqlite.prepare<{
     vault: string;
@@ -288,10 +290,10 @@ export function createDatabase(config: AppConfig, logger: Logger): DatabaseConte
   const statusStmt = sqlite.prepare('SELECT COUNT(*) as count FROM notes');
   const chunkCountStmt = sqlite.prepare('SELECT COUNT(*) as count FROM chunks');
 
-  const context: DatabaseContext = {
-    db: sqlite,
-    close() {
-      sqlite.close();
+    const context: DatabaseContext = {
+      db: sqlite,
+      close() {
+        sqlite.close();
     },
     upsertNote(input: NoteUpsertInput) {
       const tagsJson = JSON.stringify(input.tags);
@@ -459,9 +461,13 @@ export function createDatabase(config: AppConfig, logger: Logger): DatabaseConte
       const chunksCount = chunkCountStmt.get() as { count: number };
       return { noteCount: notesCount.count, chunkCount: chunksCount.count };
     },
-  };
+    } satisfies DatabaseContext;
 
-  logger.info({ dbPath }, 'SQLite database initialized');
+    timer.end('SQLite database ready', { dbPath });
 
-  return context;
+    return context;
+  } catch (error) {
+    timer.fail(error, 'Failed to initialize SQLite database', { dbPath });
+    throw error;
+  }
 }

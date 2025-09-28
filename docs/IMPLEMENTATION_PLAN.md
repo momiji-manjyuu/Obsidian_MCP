@@ -20,11 +20,11 @@
   - [x] `config.schema.ts`（zod等）＋バリデーション
   - [x] `storage.vaultSubdir=".mcp"` / `markdown.profile="omp-default"`
   - (O) `config.example.json` / `.env.example`
-- [~] 構造化ログ（JSON）
-  - [ ] リクエストID / レベル / モジュール / 経過ms
+- [x] 構造化ログ（JSON）
+  - [x] リクエストID / レベル / モジュール / 経過ms
   - [x] `log/logger.ts`
-- [ ] ディレクトリ用意（起動時）
-  - [ ] `/<Vault>/.mcp/{diff,logs,metrics}`
+- [x] ディレクトリ用意（起動時）
+  - [x] `/<Vault>/.mcp/{diff,logs,metrics}`
   - (A) 存在しなければ自動作成
 
 ### M1 — Read/Search（FS-only, stdio）

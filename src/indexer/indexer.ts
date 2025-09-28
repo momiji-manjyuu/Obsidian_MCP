@@ -48,7 +48,7 @@ export class Indexer {
   }
 
   async start(): Promise<void> {
-    this.logger.info('Starting indexer');
+    const timer = this.logger.startTimer('Indexer started');
     await Promise.all(
       this.config.vaults.map(async (vault) => {
         this.pending.set(vault.name, { vault, paths: new Set() });
@@ -56,6 +56,7 @@ export class Indexer {
         this.watchVault(vault);
       })
     );
+    timer.end('Indexer started', { vaults: this.config.vaults.length });
   }
 
   getStatus(): IndexerStatus {
@@ -80,6 +81,7 @@ export class Indexer {
   private async scheduleInitialScan(vault: VaultConfig) {
     const patterns = ['**/*.md'];
     const ignore = ['**/.mcp/**', '**/.git/**', '**/node_modules/**'];
+    const timer = this.logger.startTimer('Initial scan queued', { vault: vault.name });
     const files = await fg(patterns, {
       cwd: vault.absolutePath,
       dot: false,
@@ -87,7 +89,7 @@ export class Indexer {
       unique: true,
       ignore,
     });
-    this.logger.info({ vault: vault.name, files: files.length }, 'Initial scan queued');
+    timer.end('Initial scan queued', { files: files.length });
     for (const relative of files) {
       this.enqueue(vault, relative);
     }
@@ -196,10 +198,12 @@ export class Indexer {
 
   private async indexFile(vault: VaultConfig, relativePath: string) {
     const absolutePath = path.join(vault.absolutePath, relativePath);
+    const timer = this.logger.startTimer('Indexed file', { vault: vault.name, path: relativePath });
     try {
       const stat = await fs.promises.stat(absolutePath);
       if (!stat.isFile()) {
         this.db.deleteNote(vault.name, relativePath);
+        timer.end('Removed non-file entry from index', { removed: true });
         return;
       }
 
@@ -230,12 +234,17 @@ export class Indexer {
         frontmatter: parsed.frontmatter,
         chunks: parsed.chunks,
       });
+      timer.end('Indexed file', {
+        chunkCount: parsed.chunks.length,
+        tagCount: noteTags.size,
+      });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         this.db.deleteNote(vault.name, relativePath);
+        timer.end('Removed missing file from index', { removed: true });
         return;
       }
-      this.logger.error({ vault: vault.name, path: relativePath, err: error }, 'Failed to index file');
+      timer.fail(error, 'Failed to index file', { vault: vault.name, path: relativePath });
     }
   }
 
